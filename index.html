@@ -1,0 +1,321 @@
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>assignment3</title>	
+		<script src="d3.js"></script>
+		<script  src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+		<style>
+			.title{
+				display: flex;
+				justify-content: center;
+			}
+			#svg{
+				width: 1200px;
+				height: 800px;
+				background-color: #fff;
+				position: absolute;
+				left: 50%;
+				top:50%;
+				margin-left: -600px;
+				margin-top: -380px;
+			}
+			.axis{
+				fill: none;
+			    stroke: black;
+			    shape-rendering: crispEdges;
+			    font-family: sans-serif;
+    			font-size: 11px;
+			}
+			.button{
+				position: absolute;
+				right: 21%;
+				top: 11%;
+				z-index: 200;
+			}
+			#selectCountry{
+				visibility: hidden;
+				width: 1000px;
+				height: 600px;
+				background-color:rgb(200,200,200);
+				position: absolute;
+				left: 50%;
+				top:50%;
+				margin-left: -500px;
+				margin-top: -300px;
+				z-index: 999;
+			}
+			.checkBox label{
+				font-size: 25px;
+			}
+			.checkBox input{
+				zoom:180%;
+			}
+			#confirm{
+				position: absolute;
+				right: 20px;
+				top: 10px;
+			}
+			#displayBox{
+				width: 300px;
+				height: 300px;
+				position: absolute;
+				left: 23%;
+				top: 15%;
+				z-index: 500;
+			}
+			.circle{
+				display: inline-block;
+				width: 8px;
+				height: 8px;
+				border-radius: 50%;
+				margin-right: 5px;
+			}
+			.pop{
+				position: absolute;
+				left: 15%;
+				top: 14%;
+				z-index: 999;
+			}
+			.year{
+				position: absolute;
+				right: 17%;
+				bottom: 10%; 
+				z-index: 999;
+			}
+			.text{
+				font-size: 14px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="title">
+			<h1>1800年-2019年的人口变化</h1>
+		</div>
+		<div id="selectCountry">
+			<dl class="checkBox">
+		        <dt>
+		            <label>选择要显示的国家</label>        
+		        </dt>
+		        <dd>	        
+		            <p><input type="checkbox" name="item" value="China"><label>中国</label></p>
+		            <p><input type="checkbox" name="item" value="India"><label>印度</label></p>
+		            <p><input type="checkbox" name="item" value="Australia"><label>澳大利亚</label></p>
+		            <p><input type="checkbox" name="item" value="Japan"><label>日本</label></p>
+		            <p><input type="checkbox" name="item" value="Canada"><label>加拿大</label></p>
+		            <p><input type="checkbox" name="item" value="Italy"><label>意大利</label></p>
+		            <p><input type="checkbox" name="item" value="Russia"><label>俄国</label></p>
+		            <p><input type="checkbox" name="item" value="United States"><label>美国</label></p>
+		            <p><input type="checkbox" name="item" value="United Kingdom"><label>英国</label></p>
+		            <input id='confirm' type="submit"  value="确定" onclick="confirm()">
+		        </dd>
+		    </dl>
+		</div>
+		<div id="displayBox">
+		</div>
+		<button class="button" onclick="select()">添加国家</button>
+		<span class="pop">人数(千万)</span>
+		<span class="year">年份(年)</span>
+		<script>
+			
+			var width = 1200;
+			var height = 800;
+			var padding = 40;
+			var data = [];
+			var allPopulation = [];
+			var displayData = [];
+			var color = d3.scale.category20();
+			d3.csv("population.csv", function(error,csvdata){
+				if(error){
+					console.log(error);
+				}
+				var countries = [];
+				for(let i=0;i<csvdata.length;i++){
+					if(countries.indexOf(csvdata[i].Country) == -1){
+						countries.push(csvdata[i].Country);
+						let tmp = {
+							country: csvdata[i].Country,
+							yearData: [{
+								Year: csvdata[i].Year,
+								Population: parseFloat(Number(csvdata[i].Population/10000000).toFixed(2))
+								//单位千万
+							}]
+						}
+						data.push(tmp);
+					}else{
+						data.forEach(function(d){
+							if(d.country == csvdata[i].Country){
+								d.yearData.push({
+									Year: csvdata[i].Year,
+									Population: parseFloat(Number(csvdata[i].Population/10000000).toFixed(2))
+								});
+							}
+						});
+					}
+				}	
+				//为了显示每一个国家添加一个zIndex属性。值为2019年的人口数值
+				for(let i=0;i<csvdata.length;i++){
+					if(csvdata[i].Year == 2019){
+						for(let j=0; j<data.length; j++){
+							if(csvdata[i].Country == data[j].country){
+								data[j].zIndex = -parseInt(csvdata[i].Population/10000000);
+							}
+						}
+					}
+				}
+				for(let i=0; i<data.length; i++){
+					for(let j=0; j<data[i].yearData.length; j++){
+						allPopulation.push(+data[i].yearData[j].Population);
+					}
+				}
+				var svg = d3.select("body")
+							.append("svg")
+							.attr("id","svg");
+				var xScale = d3.scale.linear()
+								.domain([1799.7,2019])
+								.range([padding,width-padding]);
+								
+	    		var yScale = d3.scale.linear()
+							.domain([0,d3.max(allPopulation)])
+							.range([height-padding-1,padding]);
+				var xAxis = d3.svg.axis()
+								.scale(xScale)
+								.orient("bottom")
+								.tickValues([1800,1850,1900,1950,2000,2019]);
+				svg.append("g")
+					.call(xAxis)
+					.attr("class","axis")
+	    			.attr("transform","translate(0,"+(height-padding)+")");
+				var yAxis = d3.svg.axis()
+							.scale(yScale)
+							.orient("left")
+							.ticks(8);
+				svg.append("g")
+					.call(yAxis)
+					.attr("class","axis")
+	    			.attr("transform","translate("+padding+",0)");	
+
+				var area = d3.svg.area()
+						    .x(function(d) {return xScale(d.Year); })
+						    .y1(function(d) { return yScale(d.Population);})
+						    .y0(function(d){ return yScale(0);})
+						    .interpolate("basis");
+				displayData.push(data[0]);
+				displayData.push(data[1]);
+				displayData.push(data[2]);
+				displayData.sort(function (m, n) {
+				 if (m.zIndex < n.zIndex) return -1
+				 else if (m.zIndex > n.zIndex) return 1
+				 else return 0
+				});
+				for(let n=0; n<displayData.length; n++){
+					svg.append("path")
+					.attr("d",area(displayData[n].yearData))
+					.attr('stroke', function(d) { return color(n);})
+				    .attr('stroke-width', 2)
+				    .attr('fill', function(d) { return color(n);});
+				}
+				svg.on("mousemove",function(d,i){
+					svg.selectAll('circle')
+					   .remove();
+					svg.selectAll('text')
+					   .remove();
+					svg.append("g")
+						.call(xAxis)
+						.attr("class","axis")
+		    			.attr("transform","translate(0,"+(height-padding)+")");
+					svg.append("g")
+						.call(yAxis)
+						.attr("class","axis")
+		    			.attr("transform","translate("+padding+",0)");	
+					const width = document.getElementById('svg').scrollWidth;
+					  const offsetX = event.offsetX;
+					  const offsetY = event.offsetY;
+					  var xScale2 = d3.scale.linear()
+								.domain([padding,width-padding])
+								.range([1799.7,2019]);
+				      var yScale2 = d3.scale.linear()
+								.domain([height-padding-1,padding])
+								.range([0,d3.max(allPopulation)]);
+					  var displayInfo = '';
+					  displayData.forEach(function(d,i){
+					  	d.yearData.forEach(function(d2){
+					  		if(d2.Year == Math.round(xScale2(offsetX))){
+					  			svg.append('circle')
+					  			   .attr("cx", offsetX)
+								   .attr("cy", yScale(d2.Population))
+								   .attr("r", '6')
+								   .attr("fill",function(){ return color(i);})
+								   .attr("stroke-width","4")
+								   .attr("stroke",function(){ return color(i+5);})
+								   ;
+								displayInfo += "<p onclick='prominentSelf()'><span class='circle' style='background-color:"+color(i)+";border:4px solid "+color(i+5)+"'></span>"+d.country+':'+d2.Population+'(千万)</p>';
+								svg.append('text')
+									.text(Math.round(xScale2(offsetX)))
+									.attr('x',offsetX)
+									.attr('y',yScale(-6))
+									.attr('class','text');
+					  		}				  		
+					  	});
+					  });
+					  document.getElementById('displayBox').innerHTML = displayInfo;
+				});
+				
+			});
+			function select(){
+				var ele = document.getElementById('selectCountry');
+				ele.style.visibility = "visible";
+			}
+			function confirm(){
+				displayData = [];
+				d3.selectAll('path')
+					.remove();
+				var obj = document.getElementsByName('item');
+				for(var i in obj){
+					if(obj[i].checked){
+						data.forEach(function(d){
+							if(d.country == obj[i].value){
+								displayData.push(d);
+							}
+						});						
+					}
+				}
+				displayData.sort(function (m, n) {
+					 if (m.zIndex < n.zIndex) return -1
+					 else if (m.zIndex > n.zIndex) return 1
+					 else return 0
+				});
+
+				var ele = document.getElementById('selectCountry');
+				ele.style.visibility = "hidden";
+
+
+				var svg = d3.select("svg");
+				var xScale = d3.scale.linear()
+								.domain([1799.7,2019])
+								.range([padding,width-padding]);
+								
+	    		var yScale = d3.scale.linear()
+							.domain([0,d3.max(allPopulation)])
+							.range([height-padding-1,padding]);
+				var area = d3.svg.area()
+						    .x(function(d) {return xScale(d.Year); })
+						    .y1(function(d) { return yScale(d.Population);})
+						    .y0(function(d){ return yScale(0);})
+						    .interpolate("basis");	
+				for(let n=0; n<displayData.length; n++){
+					svg.append("path")
+					.attr("d",area(displayData[n].yearData))
+					.attr('stroke', function(d) { return color(n);})
+				    .attr('stroke-width', 2)
+				    .attr('fill', function(d) { return color(n);});
+				}
+			}
+			$(document).ready(function(){
+				  $("#p2").click(function(){
+				    $("#p2").css("background-color","red");
+				    console.log($("#p2").text());
+				  });
+			});
+		</script>
+	</body>
+</html>
